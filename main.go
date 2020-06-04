@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/buaazp/fasthttprouter"
 	"github.com/fasthttp-contrib/websocket"
@@ -80,15 +79,16 @@ func indexView(ctx *fasthttp.RequestCtx) {
 	rwWDM.RLock()
 	backdata :=rwWDM.data
 	rwWDM.RUnlock()
-	mjson,_ :=json.Marshal(backdata)
-	mString :=string(mjson)
 	var htmstr = ""
+	var jsstr = ""
 	var i = 0
-	for k , _:= range backdata {
+	for k , v:= range backdata {
 		i++
+		jsstr = jsstr +  `<tr><td>` + k + `<\/td><td id=web`+ strconv.Itoa(i) +` >`+strconv.Itoa(v)+`<\/td><\/tr>`
 		htmstr = htmstr + `
 ws`+strconv.Itoa(i)+`=new WebSocket("ws://localhost:8080/ws/onlineServer?weburl=`+k+`");
 `+ `ws`+strconv.Itoa(i)+`.onmessage=function(e){document.getElementById("web`+strconv.Itoa(i)+`").innerHTML=e.data-1};`
+
 	}
 	indexTemplate := template.Must(template.New("").Parse(`
 <!DOCTYPE html>
@@ -99,14 +99,8 @@ ws`+strconv.Itoa(i)+`=new WebSocket("ws://localhost:8080/ws/onlineServer?weburl=
     <title>网站在线人数监控</title>
 <script>
 window.addEventListener("load", function (evt) {
-            var webdata = `+mString+`;
-            var weblist = document.getElementById("weblist");
-            var i = 0
-            for (k in webdata) {
-                i++
-                weblist.insertAdjacentHTML("beforeend", "<tr><td>" + k + "<\/td><td id=web" + i + ">" + webdata[
-                    k] + "<\/td><\/tr>");
-            }
+            const weblist = document.getElementById("weblist");
+weblist.insertAdjacentHTML("beforeend","`+jsstr+`");
 `+htmstr+`
         });
 </script>
