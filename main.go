@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"github.com/fasthttp/websocket"
 	"github.com/valyala/fasthttp"
 	"html/template"
@@ -32,7 +31,6 @@ var rwWDM = struct {
 func main() {
 	flag.Parse()
 	requestHandler := func(ctx *fasthttp.RequestCtx) {
-		fmt.Println(string(ctx.Path()))
 		switch string(ctx.Path()) {
 		case "/":
 			indexView(ctx)
@@ -124,7 +122,7 @@ func indexView(ctx *fasthttp.RequestCtx) {
 		i++
 		jsstr = jsstr + `<tr><td>` + k + `<\/td><td id=web` + strconv.Itoa(i) + ` >` + strconv.Itoa(v) + `<\/td><\/tr>`
 		wsstr = `web` + strconv.Itoa(i)
-		htmstr = htmstr + wsstr + `=new WebSocket("ws://` + *addr + `/weblistServer");` + wsstr+ `.onopen = function (evt){` + wsstr+ `.send("`+k+`");};` + wsstr+ `.onmessage=function(e){document.getElementById("` + wsstr+ `").innerHTML=e.data};
+		htmstr = htmstr + wsstr + `=new WebSocket("ws://` + *addr + `/weblistServer");` + wsstr + `.onopen = function (evt){` + wsstr + `.send("` + k + `");};` + wsstr + `.onmessage=function(e){document.getElementById("` + wsstr + `").innerHTML=e.data};
 `
 	}
 	indexTemplate := template.Must(template.New("").Parse(`
