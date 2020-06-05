@@ -135,7 +135,9 @@ func indexView(ctx *fasthttp.RequestCtx) {
 <script>
 window.addEventListener("load", function (evt) {
             const weblist = document.getElementById("weblist");
-weblist.insertAdjacentHTML("beforeend","` + jsstr + `");
+let wdt = "` + jsstr + `";
+let weblistdata = wdt == ""?"<tr><td colspan='2'>ㄟ( ▔, ▔ )ㄏ<br>空空如也<\/td><\/tr>":wdt;
+weblist.insertAdjacentHTML("beforeend",weblistdata);
 ` + htmstr + `
         });
 </script>
