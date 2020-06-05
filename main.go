@@ -1,66 +1,103 @@
 package main
 
 import (
+	"flag"
 	"fmt"
-	"github.com/buaazp/fasthttprouter"
-	"github.com/fasthttp-contrib/websocket"
+	"github.com/fasthttp/websocket"
 	"github.com/valyala/fasthttp"
 	"html/template"
-	"regexp"
+	"log"
 	"strconv"
 	"sync"
 	"time"
 )
 
-var (
-	// http升级websocket协议的配置
-	wsUpgrader = websocket.New(WebSocketHandler)
-	//rwWDM 用于存储各个网站的在线用户量
-	rwWDM = struct {
-		sync.RWMutex
-		data map[string]int
-	}{
-		data: make(map[string]int),
-	}
-)
+var addr = flag.String("addr", "localhost:8080", "http service address")
+var port = flag.String("port", ":8080", "http service port")
+var wsUpgrader = websocket.FastHTTPUpgrader{
+	// 解决跨域问题
+	CheckOrigin: func(ctx *fasthttp.RequestCtx) bool {
+		return true
+	},
+}
+
+//rwWDM 用于存储各个网站的在线用户量
+var rwWDM = struct {
+	sync.RWMutex
+	data map[string]int
+}{
+	data: make(map[string]int),
+}
 
 func main() {
-	Router := fasthttprouter.New()
-	Router.GET("/ws/onlineServer",onlineServer)
-	Router.GET("/ws/",indexView)
-	fasthttp.ListenAndServe(":8080", Router.Handler)
+	flag.Parse()
+	requestHandler := func(ctx *fasthttp.RequestCtx) {
+		fmt.Println(string(ctx.Path()))
+		switch string(ctx.Path()) {
+		case "/":
+			indexView(ctx)
+		case "/onlineServer":
+			onlineServer(ctx)
+		case "/weblistServer":
+			weblistServer(ctx)
+		default:
+			ctx.Error("Unsupported path", fasthttp.StatusNotFound)
+		}
+	}
+	server := fasthttp.Server{
+		Name:    "網站在線人數實時監控微服務",
+		Handler: requestHandler,
+	}
+	log.Fatal(server.ListenAndServe(*port))
 }
 
-func onlineServer(c *fasthttp.RequestCtx) {
-	var reqweburl = string(c.QueryArgs().Peek("weburl"))
-	if reqweburl == "" {
-		fmt.Fprint(c, "嗨！别来无恙啊")
-		return
-	}else {
-		fmt.Fprint(c, reqweburl)
-	}
-	if err := wsUpgrader.Upgrade(c);err != nil{
+func onlineServer(ctx *fasthttp.RequestCtx) {
+	if err := wsUpgrader.Upgrade(ctx, onlineHandler); err != nil {
 		return
 	}
 }
 
-//WebSocketHandler /ws/onlineServer接口函数
-func WebSocketHandler(c *websocket.Conn) {
-	defer c.Close()
-	weburl := c.Headers().RequestURI()
-	r, _ := regexp.Compile("(weburl=)(.*)")
-	requrl := r.FindString(string(weburl))[7:]
+func weblistServer(ctx *fasthttp.RequestCtx) {
+	if err := wsUpgrader.Upgrade(ctx, weblistHandler); err != nil {
+		return
+	}
+}
+
+//onlineHandler online处理函数
+func onlineHandler(ws *websocket.Conn) {
+	defer ws.Close()
+	_, message, err := ws.ReadMessage()
+	if err != nil {
+		return //接收不到client信息，关闭该链接
+	}
+	requrl := string(message)
 	rwWDM.Lock()
 	rwWDM.data[requrl]++
 	rwWDM.Unlock()
 
-	var err error
 	//发送在线人数给客户端，相当于2秒检测一遍用户是否还在
 	for {
-		if err = c.WriteMessage(websocket.TextMessage, getNewestNum(requrl)); err != nil {
+		if err = ws.WriteMessage(websocket.TextMessage, getNewestNum(requrl)); err != nil {
 			rwWDM.Lock()
 			rwWDM.data[requrl]--
 			rwWDM.Unlock()
+			return
+		}
+		time.Sleep(time.Second * 2)
+	}
+}
+
+//weblistHandler weblist处理函数
+func weblistHandler(ws *websocket.Conn) {
+	defer ws.Close()
+	_, message, err := ws.ReadMessage()
+	if err != nil {
+		return //接收不到client信息，关闭该链接
+	}
+	requrl := string(message)
+	//发送在线人数给客户端，相当于2秒检测一遍用户是否还在
+	for {
+		if err = ws.WriteMessage(websocket.TextMessage, getNewestNum(requrl)); err != nil {
 			return
 		}
 		time.Sleep(time.Second * 2)
@@ -77,18 +114,18 @@ func getNewestNum(k string) []byte {
 
 func indexView(ctx *fasthttp.RequestCtx) {
 	rwWDM.RLock()
-	backdata :=rwWDM.data
+	backdata := rwWDM.data
 	rwWDM.RUnlock()
-	var htmstr = ""
-	var jsstr = ""
-	var i = 0
-	for k , v:= range backdata {
+	var htmstr string = ""
+	var jsstr string = ""
+	var wsstr string = ""
+	var i int = 0
+	for k, v := range backdata {
 		i++
-		jsstr = jsstr +  `<tr><td>` + k + `<\/td><td id=web`+ strconv.Itoa(i) +` >`+strconv.Itoa(v)+`<\/td><\/tr>`
-		htmstr = htmstr + `
-ws`+strconv.Itoa(i)+`=new WebSocket("ws://localhost:8080/ws/onlineServer?weburl=`+k+`");
-`+ `ws`+strconv.Itoa(i)+`.onmessage=function(e){document.getElementById("web`+strconv.Itoa(i)+`").innerHTML=e.data-1};`
-
+		jsstr = jsstr + `<tr><td>` + k + `<\/td><td id=web` + strconv.Itoa(i) + ` >` + strconv.Itoa(v) + `<\/td><\/tr>`
+		wsstr = `web` + strconv.Itoa(i)
+		htmstr = htmstr + wsstr + `=new WebSocket("ws://` + *addr + `/weblistServer");` + wsstr+ `.onopen = function (evt){` + wsstr+ `.send("`+k+`");};` + wsstr+ `.onmessage=function(e){document.getElementById("` + wsstr+ `").innerHTML=e.data};
+`
 	}
 	indexTemplate := template.Must(template.New("").Parse(`
 <!DOCTYPE html>
@@ -100,8 +137,8 @@ ws`+strconv.Itoa(i)+`=new WebSocket("ws://localhost:8080/ws/onlineServer?weburl=
 <script>
 window.addEventListener("load", function (evt) {
             const weblist = document.getElementById("weblist");
-weblist.insertAdjacentHTML("beforeend","`+jsstr+`");
-`+htmstr+`
+weblist.insertAdjacentHTML("beforeend","` + jsstr + `");
+` + htmstr + `
         });
 </script>
 <style>
@@ -124,7 +161,5 @@ table{border-collapse:collapse;margin:0 auto;text-align:center;}table td,table t
 </html>
 `))
 	ctx.SetContentType("text/html")
-	indexTemplate.Execute(ctx, "ws://"+string(ctx.Host())+"/ws/onlineServer")
+	indexTemplate.Execute(ctx, nil)
 }
-
-
