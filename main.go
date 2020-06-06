@@ -80,17 +80,6 @@ func onlineHandler(ws *websocket.Conn) {
 			break
 		}
 	}
-	//发送在线人数给客户端，相当于2秒检测一遍用户是否还在
-	//for {
-	//	ws.PingHandler()
-	//	if err = ws.WriteMessage(websocket.TextMessage, getNewestNum(requrl)); err != nil {
-	//		rwWDM.Lock()
-	//		rwWDM.data[requrl]--
-	//		rwWDM.Unlock()
-	//		return
-	//	}
-	//	time.Sleep(time.Second * 2)
-	//}
 }
 
 //weblistHandler weblist处理函数
