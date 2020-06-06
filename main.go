@@ -72,17 +72,25 @@ func onlineHandler(ws *websocket.Conn) {
 	rwWDM.Lock()
 	rwWDM.data[requrl]++
 	rwWDM.Unlock()
-
-	//发送在线人数给客户端，相当于2秒检测一遍用户是否还在
 	for {
-		if err = ws.WriteMessage(websocket.TextMessage, getNewestNum(requrl)); err != nil {
+		if _, _, err := ws.NextReader(); err != nil {
 			rwWDM.Lock()
 			rwWDM.data[requrl]--
 			rwWDM.Unlock()
-			return
+			break
 		}
-		time.Sleep(time.Second * 2)
 	}
+	//发送在线人数给客户端，相当于2秒检测一遍用户是否还在
+	//for {
+	//	ws.PingHandler()
+	//	if err = ws.WriteMessage(websocket.TextMessage, getNewestNum(requrl)); err != nil {
+	//		rwWDM.Lock()
+	//		rwWDM.data[requrl]--
+	//		rwWDM.Unlock()
+	//		return
+	//	}
+	//	time.Sleep(time.Second * 2)
+	//}
 }
 
 //weblistHandler weblist处理函数
@@ -122,7 +130,7 @@ func indexView(ctx *fasthttp.RequestCtx) {
 		i++
 		jsstr = jsstr + `<tr><td>` + k + `<\/td><td id=web` + strconv.Itoa(i) + ` >` + strconv.Itoa(v) + `<\/td><\/tr>`
 		wsstr = `web` + strconv.Itoa(i)
-		htmstr = htmstr + wsstr + `=new WebSocket("ws://` + *addr + `/weblistServer");` + wsstr + `.onopen = function (evt){` + wsstr + `.send("` + k + `");};` + wsstr + `.onmessage=function(e){document.getElementById("` + wsstr + `").innerHTML=e.data};
+		htmstr = htmstr + wsstr + `=new WebSocket("wss://` + *addr + `/weblistServer");` + wsstr + `.onopen = function (evt){` + wsstr + `.send("` + k + `");};` + wsstr + `.onmessage=function(e){document.getElementById("` + wsstr + `").innerHTML=e.data};
 `
 	}
 	indexTemplate := template.Must(template.New("").Parse(`
@@ -131,7 +139,8 @@ func indexView(ctx *fasthttp.RequestCtx) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>网站在线人数监控</title>
+    <link rel="shortcut icon" href="https://licat.work/favicon.ico">
+    <title>享购推广-网站在线人数监控面板</title>
 <script>
 window.addEventListener("load", function (evt) {
             const weblist = document.getElementById("weblist");
@@ -143,8 +152,33 @@ weblist.insertAdjacentHTML("beforeend",weblistdata);
 </script>
 <style>
 .title{text-align:center;color:#00e6ff;letter-spacing:0;text-shadow:0px 1px 0px #999,0px 2px 0px #888,0px 3px 0px #777,0px 4px 0px #666,0px 5px 0px #555,0px 6px 0px #444,0px 7px 0px #333,0px 8px 7px #001135;}
-table{border-collapse:collapse;margin:0 auto;text-align:center;}table td,table th{border:1px solid #cad9ea;color:#666;height:30px;}table thead th{background-color:#CCE8EB;}table tr:nth-child(odd){background:#fff;}table tr:nth-child(even){background:#F5FAFA;}
-.boxsha{box-shadow:0px 1px 0px #999,0px 2px 0px #888,0px 3px 0px #777,0px 4px 0px #666,0px 5px 0px #555,0px 6px 0px #444,0px 7px 0px #333,0px 8px 7px #001135;}
+table{font-family:sans-serif;border-collapse:collapse;margin:0 auto;text-align:center;}
+table td,table th{border:1px solid #cad9ea;color:#666;height:30px;}
+table thead th{background-color:#CCE8EB;}
+table tr:nth-child(odd){background:#fff;}
+table tr:nth-child(even){background:#F5FAFA;}
+.boxsha{box-shadow:0px 1px 0px #999,0px 2px 0px #888,0px 3px 0px #777,0px 4px 0px #666,0px 5px 0px #555,0px 6px 0px #444,0px 7px 0px #333,0px 8px 7px #001135;width:100%;}
+body{
+    margin: 0 auto;
+    width: 100%;
+    max-width: 800px;
+    box-sizing: border-box;
+    padding: 10px;
+}
+td:hover {
+    -webkit-transform: translateY(-3px);
+    -ms-transform: translateY(-3px);
+    transform: translateY(-3px);
+    text-shadow: 0px 1px 0px #999, 0px 2px 0px #888, 0px 3px 3px #777;
+    color: #00e6ff;
+}
+th:hover{
+    text-shadow: 0px 1px 0px #999, 0px 2px 0px #888, 0px 3px 3px #777;
+    color: #00e6ff;
+}
+th,td{
+    cursor: pointer;
+}
 </style>
 </head>
 <body>
