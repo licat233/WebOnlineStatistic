@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="shortcut icon" href="https://licat.work/favicon.ico">
+    <title>享购推广-网站在线人数监控面板</title>
+    <script>
+        window.addEventListener("load", function () {
+            const weblist = document.getElementById("weblist");
+            let wdt = `{{.JScode1}}`;
+            let weblistdata = wdt == ""?"<tr><td colspan='2'>ㄟ( ▔, ▔ )ㄏ<br>空空如也<\/td><\/tr>":wdt;
+            weblist.insertAdjacentHTML("beforeend",weblistdata);
+            {{.JScode2}}
+        });
+    </script>
+    <style>
+        .title{text-align:center;color:#00e6ff;letter-spacing:0;text-shadow:0px 1px 0px #999,0px 2px 0px #888,0px 3px 0px #777,0px 4px 0px #666,0px 5px 0px #555,0px 6px 0px #444,0px 7px 0px #333,0px 8px 7px #001135;}
+        table{font-family:sans-serif;border-collapse:collapse;margin:0 auto;text-align:center;}
+        table td,table th{border:1px solid #cad9ea;color:#666;height:30px;}
+        table thead th{background-color:#CCE8EB;}
+        table tr:nth-child(odd){background:#fff;}
+        table tr:nth-child(even){background:#F5FAFA;}
+        .boxsha{box-shadow:0px 1px 0px #999,0px 2px 0px #888,0px 3px 0px #777,0px 4px 0px #666,0px 5px 0px #555,0px 6px 0px #444,0px 7px 0px #333,0px 8px 7px #001135;width:100%;}
+        body{
+            margin: 0 auto;
+            width: 100%;
+            max-width: 800px;
+            box-sizing: border-box;
+            padding: 10px;
+        }
+        td:hover {
+            -webkit-transform: translateY(-3px);
+            -ms-transform: translateY(-3px);
+            transform: translateY(-3px);
+            text-shadow: 0px 1px 0px #999, 0px 2px 0px #888, 0px 3px 3px #777;
+            color: #00e6ff;
+        }
+        th:hover{
+            text-shadow: 0px 1px 0px #999, 0px 2px 0px #888, 0px 3px 3px #777;
+            color: #00e6ff;
+        }
+        th,td{
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+        <h1 class=title>享购推广</h1>
+        <table class=boxsha>
+            <tbody id=weblist>
+            <thead>
+            <th width=70%>Web Url</th>
+            <th width=30%>OnLine Num</th>
+            </thead>
+            </tbody>
+        </table>
+</body>
+</html>
