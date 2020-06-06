@@ -5,12 +5,12 @@
     }
     let connStatus = false;
     let weburl = "undefined" !== typeof window.weburl ? window.weburl : getwebURL();
-    let ws = new WebSocket("ws://localhost:8080//onlineServer");
+    let ws = new WebSocket("ws://localhost:8080/onlineServer");
     ws.onopen = () => {
         connStatus = true
         ws.send(weburl);
         let ping = setInterval(() => {
-            (connStatus && ws.send('ping')) || (!connStatus && clearInterval(ping))
+            connStatus?ws.send('ping'):clearInterval(ping)
         }, 1000)
     }
     ws.onerror = () => {
@@ -23,16 +23,16 @@
     }
     window.onbeforeunload = () => {
         connStatus = false
-        websocket.close();
+        ws.close();
     }
 
     function getwebURL() {
-        let host = window.location.href.trim(); -
-            1 !== host.indexOf("#") && (host = host.substr(0, host.indexOf("#"))); -
+        let host = window.location.href.trim();
+            1 !== host.indexOf("#") && (host = host.substr(0, host.indexOf("#")));
             1 !== host.indexOf("?") && (host = host.substr(0, host.indexOf("?")));
         "/" === host.substr(host.length - 1, 1) && (host = host.substr(0, host.length - 1));
-        host_arr = host.split("/");
-        web_url = host_arr[2];
+        let host_arr = host.split("/");
+        let web_url = host_arr[2];
         void 0 !== host_arr[3] && (web_url = host_arr[2] + "/" + host_arr[3]);
         web_url = String(web_url);
         return web_url;
