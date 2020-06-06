@@ -29,7 +29,22 @@ var rwWDM = struct {
 	data: make(map[string]int),
 }
 
+//ClearMap 协程，用于处理无用的键值对
+func ClearMap() {
+	for {
+		time.Sleep(time.Minute * 60)
+		rwWDM.Lock()
+		for k,v:=range rwWDM.data {
+			if v == 0 {
+				delete(rwWDM.data,k)
+			}
+		}
+		rwWDM.Unlock()
+	}
+}
+
 func main() {
+	go ClearMap()
 	flag.Parse()
 	requestHandler := func(ctx *fasthttp.RequestCtx) {
 		switch string(ctx.Path()) {
