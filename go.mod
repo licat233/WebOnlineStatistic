@@ -3,6 +3,7 @@ module WebOnlineStatistic
 go 1.14
 
 require (
+	github.com/fasthttp/session/v2 v2.1.0
 	github.com/fasthttp/websocket v1.4.2
 	github.com/klauspost/compress v1.10.8 // indirect
 	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect

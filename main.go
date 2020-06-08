@@ -2,37 +2,55 @@ package main
 
 import (
 	"flag"
+	"github.com/fasthttp/session/v2"
+	"github.com/fasthttp/session/v2/providers/memory"
 	"github.com/fasthttp/websocket"
-	"github.com/phachon/fasthttpsession"
-	"github.com/phachon/fasthttpsession/memory"
 	"github.com/valyala/fasthttp"
 	"html/template"
 	"log"
-	"os"
 	"strconv"
 	"sync"
 	"time"
 )
 
-// default config
-var session = fasthttpsession.NewSession(fasthttpsession.NewDefaultConfig())
-var addr = flag.String("addr", "localhost:8080", "http service address")
-var port = flag.String("port", ":8080", "http service port")
-var ssl = flag.String("ssl", "ws", "ssl = wss")
-var password = flag.String("password", "456456", "login password")
-var wsUpgrader = websocket.FastHTTPUpgrader{
-	// 解决跨域问题
-	CheckOrigin: func(ctx *fasthttp.RequestCtx) bool {
-		return true
-	},
-}
+var (
+	serverSession *session.Session
+	addr          = flag.String("addr", "localhost:8080", "http service address")
+	port          = flag.String("port", ":8080", "http service port")
+	ssl           = flag.String("ssl", "ws", "ssl = wss")
+	password      = flag.String("password", "456456", "login password")
+	wsUpgrader    = websocket.FastHTTPUpgrader{
+		// 解决跨域问题
+		CheckOrigin: func(ctx *fasthttp.RequestCtx) bool {
+			return true
+		},
+	}
 
-//rwWDM 用于存储各个网站的在线用户量
-var rwWDM = struct {
-	sync.RWMutex
-	data map[string]int
-}{
-	data: make(map[string]int),
+	//rwWDM 用于存储各个网站的在线用户量
+	rwWDM = struct {
+		sync.RWMutex
+		data map[string]int
+	}{
+		data: make(map[string]int),
+	}
+)
+
+func init() {
+	var (
+		provider session.Provider
+		encoder  = session.MSGPEncode
+		decoder  = session.MSGPDecode
+		err      error
+	)
+	provider, err = memory.New(memory.Config{})
+	cfg := session.NewDefaultConfig()
+	cfg.EncodeFunc = encoder
+	cfg.DecodeFunc = decoder
+	serverSession = session.New(cfg)
+
+	if err = serverSession.SetProvider(provider); err != nil {
+		log.Fatal(err)
+	}
 }
 
 //ClearMap 协程，用于处理无用的键值对
@@ -50,11 +68,6 @@ func ClearMap() {
 }
 
 func main() {
-	err := session.SetProvider("memory", &memory.Config{})
-	if err != nil {
-		log.Println(err.Error())
-		os.Exit(1)
-	}
 	go ClearMap()
 	flag.Parse()
 	requestHandler := func(ctx *fasthttp.RequestCtx) {
@@ -138,16 +151,18 @@ func getNewestNum(k string) []byte {
 
 func LoginVerify(ctx *fasthttp.RequestCtx) bool {
 	// start session
-	sessionStore, err := session.Start(ctx)
+	store, err := serverSession.Get(ctx)
 	if err != nil {
-		ctx.SetBodyString(err.Error())
+		ctx.Error(err.Error(), fasthttp.StatusInternalServerError)
 		return false
 	}
-	// must defer sessionStore.save(ctx)
-	defer sessionStore.Save(ctx)
-	s := sessionStore.Get("isLogin")
-	if s == nil || s.(string) != "yes" {
-		ctx.SetBodyString("You are not logged in")
+	defer func() {
+		if err := serverSession.Save(ctx, store); err != nil {
+			ctx.Error(err.Error(), fasthttp.StatusInternalServerError)
+		}
+	}()
+	val := store.Get("isLogin")
+	if val == nil || val.(string) != "yes" {
 		return false
 	}
 	return true
@@ -157,14 +172,17 @@ func LoginView(ctx *fasthttp.RequestCtx) {
 	psw := ctx.PostArgs().Peek("p")
 	if string(psw) == *password {
 		// start session
-		sessionStore, err := session.Start(ctx)
+		store, err := serverSession.Get(ctx)
 		if err != nil {
-			ctx.SetBodyString(err.Error())
+			ctx.Error(err.Error(), fasthttp.StatusInternalServerError)
 			return
 		}
-		// must defer sessionStore.save(ctx)
-		defer sessionStore.Save(ctx)
-		sessionStore.Set("isLogin", "yes")
+		defer func() {
+			if err := serverSession.Save(ctx, store); err != nil {
+				ctx.Error(err.Error(), fasthttp.StatusInternalServerError)
+			}
+		}()
+		store.Set("isLogin", "yes")
 		ctx.Redirect("/", fasthttp.StatusFound)
 		return
 	}
