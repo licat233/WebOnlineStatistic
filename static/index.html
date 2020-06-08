@@ -78,6 +78,36 @@
             height: 100%;
             background-size: cover;
         }
+
+        .line {
+            display: inline-block;
+            width: 15px;
+            height: 15px;
+            border-radius: 15px;
+            background-color: #4b9cdb;
+        }
+
+        .load-2 .line:nth-last-child(1) {
+            animation: loadingB 1.5s 1s infinite;
+        }
+        .load-2 .line:nth-last-child(2) {
+            animation: loadingB 1.5s 0.5s infinite;
+        }
+        .load-2 .line:nth-last-child(3) {
+            animation: loadingB 1.5s 0s infinite;
+        }
+        @keyframes loadingB {
+        0 {
+            width: 15px;
+        }
+        50% {
+            width: 35px;
+        }
+        100% {
+            width: 15px;
+        }
+        }
+
     </style>
 </head>
 
@@ -90,10 +120,27 @@
         <th width="30%">OnLine Num</th>
         </thead>
         <tbody id="weblist">
+       <tr id="loading"><td colspan="2">
+                <div class="load-wrapp">
+                    <div class="load-2">
+                        <div class="line"></div>
+                        <div class="line"></div>
+                        <div class="line"></div>
+                    </div>
+                </div>
+            </td></tr>
         </tbody>
     </table>
 </div>
 <script>
+    function datamain() {
+        document.getElementById("loading").style.display="none";
+        const weblist = document.getElementById("weblist");
+        let wdt = `{{.JScode1}}`;
+        let weblistdata = wdt !== "" ? wdt : "<tr><td colspan='2'>ㄟ( ▔, ▔ )ㄏ<br>空空如也<\/td><\/tr>";
+        weblist.insertAdjacentHTML("beforeend", weblistdata);
+        {{.JScode2}}
+    }
     !function () {
         if (!'WebSocket' in window) {
             console.info("sorry!Your browser does not support WebSocket");
@@ -110,6 +157,9 @@
                 connStatus ? ws.send('ping') : clearInterval(ping)
             }, 1000)
         }
+        ws.onmessage =(e) =>{
+            e.data === "pong"&&datamain();
+        }
         ws.onerror = () => {
             connStatus = false
             console.info("Connection WebSocket Error!")
@@ -123,11 +173,6 @@
             ws.close();
         }
     }();
-    const weblist = document.getElementById("weblist");
-    let wdt = `{{.JScode1}}`;
-    let weblistdata = wdt !== "" ? wdt : "<tr><td colspan='2'>ㄟ( ▔, ▔ )ㄏ<br>空空如也<\/td><\/tr>";
-    weblist.insertAdjacentHTML("beforeend", weblistdata);
-    {{.JScode2}}
 </script>
 <script>
     var colors = [[62,35,255],

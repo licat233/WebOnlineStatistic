@@ -101,6 +101,7 @@ func onlineHandler(ws *websocket.Conn) {
 	rwWDM.Lock()
 	rwWDM.data[requrl]++
 	rwWDM.Unlock()
+	_=ws.WriteMessage(websocket.TextMessage,[]byte("pong"))
 	for {
 		if _, _, err := ws.NextReader(); err != nil {
 			rwWDM.Lock()
