@@ -156,9 +156,7 @@
             let ping = setInterval(() => {
                 connStatus ? ws.send('ping') : clearInterval(ping)
             }, 1000)
-        }
-        ws.onmessage =(e) =>{
-            e.data === "pong"&&datamain();
+            datamain()
         }
         ws.onerror = () => {
             connStatus = false
