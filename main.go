@@ -192,7 +192,7 @@ func LoginView(ctx *fasthttp.RequestCtx) {
 }
 
 func indexView(ctx *fasthttp.RequestCtx) {
-    if p := ctx.QueryArgs().Peek("adm"); string(p)=="licat"{
+    if p := ctx.QueryArgs().Peek("adm"); string(p)=="admine"{
         goto VIEW
     }
 	if !LoginVerify(ctx){
